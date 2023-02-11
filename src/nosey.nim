@@ -76,7 +76,8 @@ proc watch*(
     = defaultFileConverter,
   fileRemover: proc (sourceFilePath, targetDir: string)
     = defaultFileRemover,
-  sourceStateJson = ""
+  sourceStateJson = "",
+  doNothingWhenNoJson = true
 ) =
   ## Scans sourceDir every {interval} milliseconds, using updateDirState().
   ## Then applies desired state to targetDir, using applyDirState().
@@ -98,9 +99,15 @@ proc watch*(
       echo "using current state of " & sourceDir & 
         " and creating " & sourceStateJson & " later"
       echo ""
-      ss = sourceDir.newDirState
+      if doNothingWhenNoJson:
+        ss = sourceDir.newDirState
+      else:
+        ss = DirState(dirName: sourceDir)
   else:
-    ss = sourceDir.newDirState
+    if doNothingWhenNoJson:
+      ss = sourceDir.newDirState
+    else:
+      ss = DirState(dirName: sourceDir)
   while true:
     sleep(interval)
     ncd = ss.updateDirState
