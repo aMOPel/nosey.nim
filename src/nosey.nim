@@ -92,10 +92,12 @@ proc watch*(
   if withJson:
     try:
       ss = readFile(sourceStateJson).parseJson.to(ss.type) 
-    except IOError as e:
-      echo "ERROR: " & e.msg
+    except JsonParsingError, IOError:
+      let e = getCurrentException()
+      echo $e.name & ": " & e.msg
       echo "using current state of " & sourceDir & 
         " and creating " & sourceStateJson & " later"
+      echo ""
       ss = sourceDir.newDirState
   else:
     ss = sourceDir.newDirState
