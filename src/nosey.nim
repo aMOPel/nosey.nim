@@ -40,12 +40,15 @@ proc updateDirState*(s: var DirState): NewChangedDeleted =
 proc defaultFileConverter*(sourceFilePath, targetDir: string) =
   ## The default fileConverter in applyDirState.
   ## It simply copies the file to targetDir.
+  echo "copying " & sourceFilePath & " to " & targetDir
   copyFileToDir(sourceFilePath, targetDir)
 
 proc defaultFileRemover*(sourceFilePath, targetDir: string) =
   ## The default fileRemover in applyDirState.
   ## It simply removes the file from targetDir.
-  removeFile(targetDir/sourceFilePath.splitPath.tail)
+  let file = targetDir/sourceFilePath.splitPath.tail
+  echo "removing " & file
+  removeFile(file)
 
 proc applyDirState*(
   sourceState: DirState,
@@ -115,9 +118,39 @@ proc watch*(
     if withJson and ncd != NewChangedDeleted():
       writeFile(sourceStateJson.addFileExt("json"), $ %*ss)
 
+proc runOnce*(
+  sourceDir, targetDir: string,
+  fileConverter: proc (sourceFilePath, targetDir: string)
+    = defaultFileConverter,
+  fileRemover: proc (sourceFilePath, targetDir: string)
+    = defaultFileRemover,
+  sourceStateJson = "",
+) =
+  let withJson = sourceStateJson != ""
+  var 
+    ss: DirState
+    ncd: NewChangedDeleted
+  if withJson:
+    try:
+      ss = readFile(sourceStateJson).parseJson.to(ss.type) 
+    except JsonParsingError, IOError:
+      let e = getCurrentException()
+      echo $e.name & ": " & e.msg
+      echo "using current state of " & sourceDir & 
+        " and creating " & sourceStateJson & " later"
+      echo ""
+      ss = DirState(dirName: sourceDir)
+  else:
+    ss = DirState(dirName: sourceDir)
+  ncd = ss.updateDirState
+  applyDirState(ss, targetDir, ncd, fileConverter, fileRemover)
+  if withJson:
+    writeFile(sourceStateJson.addFileExt("json"), $ %*ss)
+
 when isMainModule:
   const
     sourceDir = "src"
     targetDir = "tests"
-    # jsonFile = "hashes.json"
-  watch(sourceDir, targetDir)
+    jsonFile = "hashes.json"
+  runOnce(sourceDir, targetDir, sourceStateJson=jsonFile)
+  # runOnce(sourceDir, targetDir)
