@@ -15,26 +15,33 @@ const
   targetDir = "target"
   jsonFile = "dirState.json"
 
-proc defaultFileConverter*(sourceFilePath, targetDir: string) =
-  ## the default fileConverter
-  ## it simply copies the file to targetDir
-  copyFileToDir(sourceFilePath, targetDir)
-
-proc defaultFileRemover*(sourceFilePath, targetDir: string) =
-  ## the default fileRemover
-  ## it simply removes the file from targetDir
-  removeFile(targetDir/sourceFilePath.splitPath.tail)
-
 watch(
   sourceDir, # the source directory to watch
   targetDir, # the target directory to write to
   5000, # the interval in milliseconds after which to rescan the sourceDir
-  defaultFileConverter, # called on every change in sourceDir
-  defaultFileRemover, # called on every delete in sourceDir
+  defaultChangedFileHandler, # called on every NEW file in sourceDir
+  defaultChangedFileHandler, # called on every CHANGED file in sourceDir
+  defaultDeletedFileHandler, # called on every DELETED file in sourceDir
   # the `watch` proc itself doesn't do any file mutation,
   # it just calls the above callbacks
   jsonFile # optional json file, that holds dirState between sessions
 )
+
+# or
+
+runOnce(
+  sourceDir, # the source directory to watch
+  targetDir, # the target directory to write to
+  defaultChangedFileHandler, # called on every NEW file in sourceDir
+  defaultChangedFileHandler, # called on every CHANGED file in sourceDir
+  defaultDeletedFileHandler, # called on every DELETED file in sourceDir
+  # the `watch` proc itself doesn't do any file mutation,
+  # it just calls the above callbacks
+  jsonFile # optional json file, that holds dirState between sessions
+)
+
+# alternatively you can pass a DirState instead of a json file name to 
+# supply the initial DirState
 ```
 
 You can also write your own `watch` proc,
