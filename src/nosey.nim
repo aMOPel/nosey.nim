@@ -126,6 +126,11 @@ proc runOnce*(
     = defaultFileRemover,
   sourceStateJson = "",
 ) =
+  ## Scans sourceDir once, using updateDirState().
+  ## Then applies desired state to targetDir, using applyDirState().
+  ## Optionally a file name can be passed in sourceStateJson.
+  ## It will supply the initial source DirState 
+  ## and will be updated with the new DirState.
   let withJson = sourceStateJson != ""
   var 
     ss: DirState
