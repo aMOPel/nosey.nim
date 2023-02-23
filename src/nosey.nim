@@ -44,10 +44,10 @@ proc defaultChangedFileHandler*(sourceFilePath, targetDir: string) =
   copyFileToDir(sourceFilePath, targetDir)
 
 proc defaultDeletedFileHandler*(sourceFilePath, targetDir: string) =
-  ## The default removedFileHandler in applyDirState.
-  ## It simply removes the file from targetDir.
+  ## The default deletedFileHandler in applyDirState.
+  ## It simply deletes the file from targetDir.
   let file = targetDir/sourceFilePath.splitPath.tail
-  echo "removing " & file
+  echo "deleting " & file
   removeFile(file)
 
 proc applyDirState*(
@@ -58,13 +58,14 @@ proc applyDirState*(
     = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
-  removedFileHandler: proc (sourceFilePath, targetDir: string)
+  deletedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultDeletedFileHandler,
 ) =
   ## Applies the desired state, based on the diffSets,
-  ## removedFileHandler and changedFileHandler to the targetDir.
-  ## `changedFileHandler` is called for every new or changed file in the sourceDir.
-  ## `removedFileHandler` is called for every removed file in the sourceDir.
+  ## deletedFileHandler and changedFileHandler to the targetDir.
+  ## `newFileHandler` is called for every new file in the sourceDir.
+  ## `changedFileHandler` is called for every changed file in the sourceDir.
+  ## `deletedFileHandler` is called for every deleted file in the sourceDir.
   ## WARNING: This doesn't watch the state of the targetDir,
   ## so if the targetDir is manipulated by something else,
   ## those changes might be overwritten.
@@ -73,7 +74,7 @@ proc applyDirState*(
   for fn in diffSets.changed:
     changedFileHandler(sourceState.dirName/fn, targetDir/fn.splitPath.head)
   for fn in diffSets.deleted:
-    removedFileHandler(sourceState.dirName/fn, targetDir/fn.splitPath.head)
+    deletedFileHandler(sourceState.dirName/fn, targetDir/fn.splitPath.head)
 
 proc watch*(
   sourceDir, targetDir: string,
@@ -82,7 +83,7 @@ proc watch*(
     = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
-  removedFileHandler: proc (sourceFilePath, targetDir: string)
+  deletedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultDeletedFileHandler,
   sourceStateJson = "",
   doNothingWhenNoJson = true
@@ -125,7 +126,7 @@ proc watch*(
       ncd,
       newFileHandler,
       changedFileHandler,
-      removedFileHandler
+      deletedFileHandler
     )
     if withJson and ncd != NewChangedDeleted():
       writeFile(sourceStateJson.addFileExt("json"), $ %*ss)
@@ -136,7 +137,7 @@ proc runOnce*(
     = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
-  removedFileHandler: proc (sourceFilePath, targetDir: string)
+  deletedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultDeletedFileHandler,
   sourceStateJson = "",
 ) =
@@ -168,7 +169,7 @@ proc runOnce*(
     ncd,
     newFileHandler,
     changedFileHandler,
-    removedFileHandler
+    deletedFileHandler
   )
   if withJson:
     writeFile(sourceStateJson.addFileExt("json"), $ %*ss)
@@ -180,7 +181,7 @@ proc watch*(
     = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
-  removedFileHandler: proc (sourceFilePath, targetDir: string)
+  deletedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultDeletedFileHandler,
   initialState = DirState(),
   doNothingWhenNoInitial = true
@@ -211,7 +212,7 @@ proc watch*(
       ncd,
       newFileHandler,
       changedFileHandler,
-      removedFileHandler
+      deletedFileHandler
     )
 
 proc runOnce*(
@@ -220,7 +221,7 @@ proc runOnce*(
     = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
-  removedFileHandler: proc (sourceFilePath, targetDir: string)
+  deletedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultDeletedFileHandler,
   initialState = DirState(),
 ) =
@@ -244,7 +245,7 @@ proc runOnce*(
     ncd,
     newFileHandler,
     changedFileHandler,
-    removedFileHandler
+    deletedFileHandler
   )
 
 when isMainModule:
