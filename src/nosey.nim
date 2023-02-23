@@ -54,6 +54,8 @@ proc applyDirState*(
   sourceState: DirState,
   targetDir: string,
   diffSets = NewChangedDeleted(),
+  newFileHandler: proc (sourceFilePath, targetDir: string)
+    = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
   removedFileHandler: proc (sourceFilePath, targetDir: string)
@@ -66,8 +68,9 @@ proc applyDirState*(
   ## WARNING: This doesn't watch the state of the targetDir,
   ## so if the targetDir is manipulated by something else,
   ## those changes might be overwritten.
-  let changed = diffSets.new + diffSets.changed
-  for fn in changed:
+  for fn in diffSets.new:
+    newFileHandler(sourceState.dirName/fn, targetDir/fn.splitPath.head)
+  for fn in diffSets.changed:
     changedFileHandler(sourceState.dirName/fn, targetDir/fn.splitPath.head)
   for fn in diffSets.deleted:
     removedFileHandler(sourceState.dirName/fn, targetDir/fn.splitPath.head)
@@ -75,6 +78,8 @@ proc applyDirState*(
 proc watch*(
   sourceDir, targetDir: string,
   interval = 5000,
+  newFileHandler: proc (sourceFilePath, targetDir: string)
+    = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
   removedFileHandler: proc (sourceFilePath, targetDir: string)
@@ -114,12 +119,21 @@ proc watch*(
   while true:
     sleep(interval)
     ncd = ss.updateDirState
-    applyDirState(ss, targetDir, ncd, changedFileHandler, removedFileHandler)
+    applyDirState(
+      ss,
+      targetDir,
+      ncd,
+      newFileHandler,
+      changedFileHandler,
+      removedFileHandler
+    )
     if withJson and ncd != NewChangedDeleted():
       writeFile(sourceStateJson.addFileExt("json"), $ %*ss)
 
 proc runOnce*(
   sourceDir, targetDir: string,
+  newFileHandler: proc (sourceFilePath, targetDir: string)
+    = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
   removedFileHandler: proc (sourceFilePath, targetDir: string)
@@ -148,13 +162,22 @@ proc runOnce*(
   else:
     ss = DirState(dirName: sourceDir)
   ncd = ss.updateDirState
-  applyDirState(ss, targetDir, ncd, changedFileHandler, removedFileHandler)
+  applyDirState(
+    ss,
+    targetDir,
+    ncd,
+    newFileHandler,
+    changedFileHandler,
+    removedFileHandler
+  )
   if withJson:
     writeFile(sourceStateJson.addFileExt("json"), $ %*ss)
 
 proc watch*(
   sourceDir, targetDir: string,
   interval = 5000,
+  newFileHandler: proc (sourceFilePath, targetDir: string)
+    = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
   removedFileHandler: proc (sourceFilePath, targetDir: string)
@@ -182,10 +205,19 @@ proc watch*(
   while true:
     sleep(interval)
     ncd = ss.updateDirState
-    applyDirState(ss, targetDir, ncd, changedFileHandler, removedFileHandler)
+    applyDirState(
+      ss,
+      targetDir,
+      ncd,
+      newFileHandler,
+      changedFileHandler,
+      removedFileHandler
+    )
 
 proc runOnce*(
   sourceDir, targetDir: string,
+  newFileHandler: proc (sourceFilePath, targetDir: string)
+    = defaultChangedFileHandler,
   changedFileHandler: proc (sourceFilePath, targetDir: string)
     = defaultChangedFileHandler,
   removedFileHandler: proc (sourceFilePath, targetDir: string)
@@ -206,7 +238,14 @@ proc runOnce*(
   else:
     ss = DirState(dirName: sourceDir)
   ncd = ss.updateDirState
-  applyDirState(ss, targetDir, ncd, changedFileHandler, removedFileHandler)
+  applyDirState(
+    ss,
+    targetDir,
+    ncd,
+    newFileHandler,
+    changedFileHandler,
+    removedFileHandler
+  )
 
 when isMainModule:
   const
