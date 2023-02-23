@@ -152,6 +152,62 @@ proc runOnce*(
   if withJson:
     writeFile(sourceStateJson.addFileExt("json"), $ %*ss)
 
+proc watch*(
+  sourceDir, targetDir: string,
+  interval = 5000,
+  fileConverter: proc (sourceFilePath, targetDir: string)
+    = defaultFileConverter,
+  fileRemover: proc (sourceFilePath, targetDir: string)
+    = defaultFileRemover,
+  initialState = DirState(),
+  doNothingWhenNoInitial = true
+) =
+  ## Scans sourceDir every {interval} milliseconds, using updateDirState().
+  ## Then applies desired state to targetDir, using applyDirState().
+  ## Optionally a DirState can be passed in initialState.
+  ## It will supply the initial source DirState 
+  ## WARNING: When using CTRL-C to stop the watcher while it's writing a file,
+  ## I'm not sure what happens.
+  let withInitial = initialState != DirState()
+  var 
+    ss: DirState
+    ncd: NewChangedDeleted
+  if withInitial:
+    ss = initialState
+  else:
+    if doNothingWhenNoInitial:
+      ss = sourceDir.newDirState
+    else:
+      ss = DirState(dirName: sourceDir)
+  while true:
+    sleep(interval)
+    ncd = ss.updateDirState
+    applyDirState(ss, targetDir, ncd, fileConverter, fileRemover)
+
+proc runOnce*(
+  sourceDir, targetDir: string,
+  fileConverter: proc (sourceFilePath, targetDir: string)
+    = defaultFileConverter,
+  fileRemover: proc (sourceFilePath, targetDir: string)
+    = defaultFileRemover,
+  initialState = DirState(),
+) =
+  ## Scans sourceDir once, using updateDirState().
+  ## Then applies desired state to targetDir, using applyDirState().
+  ## Optionally a file name can be passed in sourceStateJson.
+  ## It will supply the initial source DirState 
+  ## and will be updated with the new DirState.
+  let withInitial = initialState != DirState()
+  var 
+    ss: DirState
+    ncd: NewChangedDeleted
+  if withInitial:
+    ss = initialState
+  else:
+    ss = DirState(dirName: sourceDir)
+  ncd = ss.updateDirState
+  applyDirState(ss, targetDir, ncd, fileConverter, fileRemover)
+
 when isMainModule:
   const
     sourceDir = "src"
